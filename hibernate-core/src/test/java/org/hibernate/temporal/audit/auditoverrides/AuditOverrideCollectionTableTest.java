@@ -119,7 +119,7 @@ public class AuditOverrideCollectionTableTest {
 		@Id
 		long id;
 
-		@OneToMany //TODO @Elementcollection, manyToOne ?, ManyToMany ?
+		@OneToMany
 		@JoinColumn(name = "department_id")
 		@Audited.CollectionTable( name = "custom_audit_collection_table" )
 		List<Other> auditedCollection;
