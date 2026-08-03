@@ -85,7 +85,7 @@ public class AuditOverrideCollectionTableTest {
 	@AuditOverrides(
 			{@AuditOverride(name = "firstCollection", isAudited = true),
 					@AuditOverride(name = "secondCollection", isAudited = false),
-			@AuditOverride(name = "thirdCollection", collectionTable = @Audited.CollectionTable( catalog = "cat", schema = "schema", name = "custom_audited_join_table_name" ))} //TODO schema and catalog?
+			@AuditOverride(name = "thirdCollection", collectionTable = @Audited.CollectionTable( catalog = "cat", schema = "schema", name = "custom_audited_join_table_name" ))}
 	)
 	static class EntityWithOverrides extends MSCWithExcludedCollectionProperty{
 	}
