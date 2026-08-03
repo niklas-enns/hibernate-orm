@@ -50,10 +50,4 @@ public @interface AuditOverride {
 	 */
 	Audited.CollectionTable collectionTable() default @Audited.CollectionTable( name = "");
 
-	/**
-	 * Specifies class which field (or property) mapping is being overridden. <strong>Required</strong> if
-	 * {@link AuditOverride} is used to change auditing behavior of attributes inherited from
-	 * {@link jakarta.persistence.MappedSuperclass} type.
-	 */
-	Class forClassMaybeToDo() default void.class;
 }
