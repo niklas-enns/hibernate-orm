@@ -257,7 +257,7 @@ public class EntityBinder {
 				inheritanceStates
 		);
 		entityBinder.handleInheritance( inheritanceState, superEntity, holder );
-		entityBinder.handleIdentifier( holder, inheritanceStates, inheritanceState ); //"handleIdentifier" ???
+		entityBinder.handleIdentifier( holder, inheritanceStates, inheritanceState );
 
 		if ( persistentClass instanceof RootClass rootClass ) {
 			collector.addSecondPass( new CreateKeySecondPass( rootClass ) );

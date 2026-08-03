@@ -667,8 +667,8 @@ public final class AuditHelper {
 	private static Column copyColumn(Table targetTable, Column column) {
 		final var targetColumn = targetTable.getColumn( column );
 		if ( targetColumn == null ) {
-			final var columnCopy = column.clone(); 	//
-			columnCopy.copy( column );				// ?
+			final var columnCopy = column.clone();
+			columnCopy.copy( column );
 			targetTable.addColumn( columnCopy );
 			return columnCopy;
 		}
