@@ -830,9 +830,13 @@ public final class AuditHelper {
 		for ( var subclass : rootClass.getSubclasses() ) {
 			var revocations = findRevocations( subclass );
 			for ( var revocation : revocations ) {
-				var revokedProperty = revocation.name();
-				mappedColumns.add( revokedProperty ); //TODO column names, not the name of the property!
-				excluded.remove( revokedProperty ); //TODO column names, not the name of the property!
+				var revokedPropertyName = revocation.name();
+				var property = rootClass.getProperty( revokedPropertyName );
+				for ( var column : property.getColumns() ) {
+					mappedColumns.add( column.getCanonicalName() );
+					excluded.remove( column.getCanonicalName() );
+				}
+
 			}
 		}
 		// Exclude unmapped columns (e.g. FK from unidirectional @OneToMany @JoinColumn)
