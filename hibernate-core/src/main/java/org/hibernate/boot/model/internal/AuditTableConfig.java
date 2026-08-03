@@ -9,6 +9,12 @@ import org.hibernate.mapping.PersistentClass;
 
 import static org.hibernate.boot.model.internal.AuditHelper.findFirstAuditOverrideForProperty;
 
+/**
+ * Universal audit table configuration that can be created from different sources.
+ *
+ * @author Niklas Enns
+ */
+
 public record AuditTableConfig(String name, String schema, String catalog, String changesetIdColumn,
 							String modificationTypeColumn, String invalidatingChangesetIdColumn) {
 
