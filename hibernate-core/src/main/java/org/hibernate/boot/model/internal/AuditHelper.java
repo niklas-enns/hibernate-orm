@@ -872,7 +872,7 @@ public final class AuditHelper {
 			var mappedSuperClass = rootClass.getSuperMappedSuperclass();
 			while ( mappedSuperClass != null && auditOverride == null) {
 				auditOverride = getAuditOverrideForProperty( mappedSuperClass.getMappedClass(), name );
-				mappedSuperClass = mappedSuperClass.getSuperMappedSuperclass();  //TODO ensure the stop condition works correctly (MSC under Entity)
+				mappedSuperClass = mappedSuperClass.getSuperMappedSuperclass();
 			}
 		}
 		if ( auditOverride == null ) {
