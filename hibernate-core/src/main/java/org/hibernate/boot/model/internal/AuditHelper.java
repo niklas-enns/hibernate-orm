@@ -844,10 +844,10 @@ public final class AuditHelper {
 		return excluded;
 	}
 
-	private static Set<AuditOverride> findRevocations(PersistentClass rootClass) {
-		var revocations = getRevocations( rootClass.getMappedClass() );
+	private static Set<AuditOverride> findRevocations(PersistentClass persistentClass) {
+		var revocations = getRevocations( persistentClass.getMappedClass() );
 
-		var mappedSuperClass = rootClass.getSuperMappedSuperclass();
+		var mappedSuperClass = persistentClass.getSuperMappedSuperclass();
 		while ( mappedSuperClass != null ) {
 			revocations.addAll( getRevocations( mappedSuperClass.getMappedClass() ) );
 			mappedSuperClass = mappedSuperClass.getSuperMappedSuperclass();
@@ -884,7 +884,7 @@ public final class AuditHelper {
 		}
 		var overrides = mappedClass.getAnnotation( AuditOverrides.class );
 		if ( overrides != null ) {
-			return new HashSet<>( Arrays.stream( overrides.value() ).toList() );
+			return new HashSet<>( Arrays.asList( overrides.value() ) );
 		}
 		return Set.of();
 	}
