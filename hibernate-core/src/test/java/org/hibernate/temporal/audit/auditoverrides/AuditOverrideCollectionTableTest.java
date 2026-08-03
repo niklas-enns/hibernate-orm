@@ -24,9 +24,7 @@ import org.hibernate.testing.orm.junit.SessionFactory;
 import org.hibernate.testing.orm.junit.Setting;
 import org.junit.jupiter.api.Test;
 
-import java.util.Collection;
 import java.util.List;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -154,17 +152,6 @@ public class AuditOverrideCollectionTableTest {
 		table.setSchema( schema );
 		table.setName( tableName );
 		return table;
-	}
-
-	private static void assertTable(Collection<org.hibernate.mapping.Table> tables, String tableName, Consumer<org.hibernate.mapping.Table> consumer) {
-		var tableFound = false;
-		for ( var table : tables ) {
-			if ( table.getName().equals( tableName ) ) {
-				tableFound = true;
-				consumer.accept( table );
-			}
-		}
-		assertTrue( tableFound, () -> "Table %s not found. Available tables: %s".formatted( tableName, tables ) );
 	}
 
 }
