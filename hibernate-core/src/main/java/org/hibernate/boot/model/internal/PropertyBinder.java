@@ -617,7 +617,11 @@ public class PropertyBinder {
 	}
 
 	private void handleAuditedExcluded(Property property) {
-		if ( memberDetails != null && memberDetails.hasDirectAnnotationUsage( Audited.Excluded.class ) ) {
+		final Boolean auditedOverride = holder.getOverriddenAudited( qualify( holder.getPath(), name ) );
+		final boolean excluded = auditedOverride != null
+				? !auditedOverride
+				: memberDetails != null && memberDetails.hasDirectAnnotationUsage( Audited.Excluded.class );
+		if ( excluded ) {
 			property.setAuditedExcluded( true );
 			property.setOptimisticLocked( false );
 		}

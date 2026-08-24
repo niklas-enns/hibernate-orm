@@ -12,6 +12,7 @@ import java.util.Map;
 import jakarta.persistence.AttributeConverter;
 import org.hibernate.AnnotationException;
 import org.hibernate.AssertionFailure;
+import org.hibernate.annotations.AuditOverride;
 import org.hibernate.annotations.ColumnTransformer;
 import org.hibernate.annotations.TimeZoneColumn;
 import org.hibernate.boot.model.convert.internal.ConverterDescriptors;
@@ -65,6 +66,8 @@ public abstract class AbstractPropertyHolder implements PropertyHolder {
 	private Map<String, JoinTable> currentPropertyJoinTableOverride;
 	private Map<String, ForeignKey> holderForeignKeyOverride;
 	private Map<String, ForeignKey> currentPropertyForeignKeyOverride;
+	private Map<String, Boolean> holderAuditedOverride;
+	private Map<String, Boolean> currentPropertyAuditedOverride;
 
 	AbstractPropertyHolder(
 			String path,
@@ -192,6 +195,7 @@ public abstract class AbstractPropertyHolder implements PropertyHolder {
 			currentPropertyJoinColumnOverride = null;
 			currentPropertyJoinTableOverride = null;
 			currentPropertyForeignKeyOverride = null;
+			currentPropertyAuditedOverride = null;
 		}
 		else {
 			currentPropertyColumnOverride = buildColumnOverride( attributeMember, getPath(), context );
@@ -217,6 +221,11 @@ public abstract class AbstractPropertyHolder implements PropertyHolder {
 			currentPropertyForeignKeyOverride = buildForeignKeyOverride( attributeMember, getPath(), context );
 			if ( currentPropertyForeignKeyOverride.isEmpty() ) {
 				currentPropertyForeignKeyOverride = null;
+			}
+
+			currentPropertyAuditedOverride = buildAuditedOverride( attributeMember, getPath(), context );
+			if ( currentPropertyAuditedOverride.isEmpty() ) {
+				currentPropertyAuditedOverride = null;
 			}
 		}
 	}
@@ -373,6 +382,33 @@ public abstract class AbstractPropertyHolder implements PropertyHolder {
 		return null;
 	}
 
+	@Override
+	public Boolean getOverriddenAudited(String propertyName) {
+		return getExactOverriddenAudited( propertyName );
+	}
+
+	private Boolean getExactOverriddenAudited(String propertyName) {
+		if ( parent != null ) {
+			final var result = parent.getExactOverriddenAudited( propertyName );
+			if ( result != null ) {
+				return result;
+			}
+		}
+		if ( currentPropertyAuditedOverride != null ) {
+			final var result = currentPropertyAuditedOverride.get( propertyName );
+			if ( result != null ) {
+				return result;
+			}
+		}
+		if ( holderAuditedOverride != null ) {
+			final var result = holderAuditedOverride.get( propertyName );
+			if ( result != null ) {
+				return result;
+			}
+		}
+		return null;
+	}
+
 	/**
 	 * Get column overriding, property first, then parent, then holder
 	 * replace the placeholder 'collection&amp;&amp;element' with nothing
@@ -438,6 +474,7 @@ public abstract class AbstractPropertyHolder implements PropertyHolder {
 		Map<String, JoinColumn[]> joinColumnOverride = new HashMap<>();
 		Map<String, JoinTable> joinTableOverride = new HashMap<>();
 		Map<String, ForeignKey> foreignKeyOverride = new HashMap<>();
+		Map<String, Boolean> auditedOverride = new HashMap<>();
 		while ( current != null && !ClassDetails.OBJECT_CLASS_DETAILS.equals( current ) ) {
 			if ( isManagedType( current ) ) {
 				//FIXME is embeddable override?
@@ -446,16 +483,19 @@ public abstract class AbstractPropertyHolder implements PropertyHolder {
 				final var currentJoinOverride = buildJoinColumnOverride( current, path, context );
 				final var currentJoinTableOverride = buildJoinTableOverride( current, path, context );
 				final var currentForeignKeyOverride = buildForeignKeyOverride( current, path, context );
+				final var currentAuditedOverride = buildAuditedOverride( current, path, context );
 				currentOverride.putAll( columnOverride ); //subclasses have precedence over superclasses
 				currentTransformerOverride.putAll( columnTransformerOverride ); //subclasses have precedence over superclasses
 				currentJoinOverride.putAll( joinColumnOverride ); //subclasses have precedence over superclasses
 				currentJoinTableOverride.putAll( joinTableOverride ); //subclasses have precedence over superclasses
 				currentForeignKeyOverride.putAll( foreignKeyOverride ); //subclasses have precedence over superclasses
+				currentAuditedOverride.putAll( auditedOverride ); //subclasses have precedence over superclasses
 				columnOverride = currentOverride;
 				columnTransformerOverride = currentTransformerOverride;
 				joinColumnOverride = currentJoinOverride;
 				joinTableOverride = currentJoinTableOverride;
 				foreignKeyOverride = currentForeignKeyOverride;
+				auditedOverride = currentAuditedOverride;
 			}
 			current = current.getSuperClass();
 		}
@@ -465,6 +505,7 @@ public abstract class AbstractPropertyHolder implements PropertyHolder {
 		holderJoinColumnOverride = joinColumnOverride.isEmpty() ? null : joinColumnOverride;
 		holderJoinTableOverride = joinTableOverride.isEmpty() ? null : joinTableOverride;
 		holderForeignKeyOverride = foreignKeyOverride.isEmpty() ? null : foreignKeyOverride;
+		holderAuditedOverride = auditedOverride.isEmpty() ? null : auditedOverride;
 	}
 
 	private static boolean isManagedType(ClassDetails current) {
@@ -650,6 +691,23 @@ public abstract class AbstractPropertyHolder implements PropertyHolder {
 
 	private static AssociationOverride[] buildAssociationOverrides(AnnotationTarget element, MetadataBuildingContext context) {
 		return element.getRepeatedAnnotationUsages( AssociationOverride.class, context.getBootstrapContext().getModelsContext() );
+	}
+
+	private static Map<String, Boolean> buildAuditedOverride(
+			AnnotationTarget element,
+			String path,
+			MetadataBuildingContext context) {
+		final Map<String, Boolean> result = new HashMap<>();
+		if ( element == null ) {
+			return result;
+		}
+		final var overrides =
+				element.getRepeatedAnnotationUsages( AuditOverride.class,
+						context.getBootstrapContext().getModelsContext() );
+		for ( var override : overrides ) {
+			result.put( qualify( path, override.name() ), override.isAudited() );
+		}
+		return result;
 	}
 
 	private static Map<String, JoinTable> buildJoinTableOverride(AnnotationTarget element, String path, MetadataBuildingContext context) {
