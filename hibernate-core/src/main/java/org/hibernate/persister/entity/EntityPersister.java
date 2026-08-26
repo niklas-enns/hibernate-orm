@@ -813,6 +813,18 @@ public interface EntityPersister extends EntityMappingType, EntityMutationTarget
 	}
 
 	/**
+	 * Is the property excluded from a shared, polymorphic audit read query built for this persister's
+	 * whole inheritance hierarchy (relevant for SINGLE_TABLE, where one physical audit table and one
+	 * query serve every concrete subtype). Unlike {@link #isPropertyAuditedExcluded(int)}, which reflects
+	 * only this specific entity's own decision, this also accounts for a descendant's own
+	 * {@code @AuditOverride} reviving a property that this entity excludes by default - such a column
+	 * must still be selected, even though this entity's own rows never populate it.
+	 */
+	default boolean isPropertyAuditedExcludedForRead(int attributeIndex) {
+		return isPropertyAuditedExcluded( attributeIndex );
+	}
+
+	/**
 	 * Get the "checkability" of the properties of this class
 	 * (is the property dirty checked, does the cache need
 	 * to be updated)

@@ -67,12 +67,9 @@ class AuditOverrideTest {
 	static class IncludedEntity extends Base {
 	}
 
-	// @AuditOverride, like JPA's @AttributeOverride, only applies across
-	// @MappedSuperclass (or embeddable) boundaries: a property already bound
-	// by a real @Entity superclass is shared with its subclasses rather than
-	// rebound per subclass, so it cannot be overridden per subclass. Chaining
-	// two @MappedSuperclass levels is how a "closer override wins" scenario
-	// is exercised instead.
+	// Chaining two @MappedSuperclass levels exercises a "closer override wins" scenario. See
+	// AuditOverrideEntityAncestorTest for @AuditOverride targeting a property owned by a genuine
+	// @Entity ancestor rather than a @MappedSuperclass.
 	@MappedSuperclass
 	@AuditOverride(name = "secret", isAudited = true)
 	static class Middle extends Base {

@@ -365,6 +365,7 @@ public abstract class AbstractEntityPersister
 	private final Set<String> sharedColumnNames;
 	private final boolean[] propertyTemporalExcluded;
 	private final boolean[] propertyAuditedExcluded;
+	private final boolean[] propertyAuditedExcludedForRead;
 	private final boolean hasTemporalExcludedProperties;
 	private final int[] immutablePropertyIndexes;
 
@@ -604,6 +605,7 @@ public abstract class AbstractEntityPersister
 		propertyColumnInsertable = new boolean[hydrateSpan][];
 		propertyTemporalExcluded = new boolean[hydrateSpan];
 		propertyAuditedExcluded = new boolean[hydrateSpan];
+		propertyAuditedExcludedForRead = new boolean[hydrateSpan];
 		sharedColumnNames = new HashSet<>();
 		nonLazyPropertyNames = new HashSet<>();
 		final List<Integer> immutableProperties = new ArrayList<>();
@@ -622,7 +624,17 @@ public abstract class AbstractEntityPersister
 			final boolean temporalExcluded = property.isTemporalExcluded();
 			propertyTemporalExcluded[i] = temporalExcluded;
 			foundTemporalExcluded = foundTemporalExcluded || temporalExcluded;
-			propertyAuditedExcluded[i] = property.isAuditedExcluded();
+			// A property physically owned by a genuine entity ancestor has only one shared Property object
+			// for the whole hierarchy, so persistentClass's own @AuditOverride (if any) for it - which is
+			// specific to THIS persister/entity, unlike the shared property.isAuditedExcluded() - takes
+			// precedence. See PersistentClass#addAuditOverride and AuditHelper#resolveAncestorAuditOverrides.
+			final Boolean auditOverride = persistentClass.getAuditOverride( property.getName() );
+			propertyAuditedExcluded[i] = auditOverride != null ? !auditOverride : property.isAuditedExcluded();
+			// The shared, polymorphic audit read query built for this hierarchy's root must still select
+			// this column if a descendant's own @AuditOverride revives it, even when THIS entity's own
+			// write mask above stays excluded. See PersistentClass#addAuditRevivedPropertyName.
+			propertyAuditedExcludedForRead[i] = propertyAuditedExcluded[i]
+					&& !persistentClass.getRootClass().isAuditRevivedPropertyName( property.getName() );
 			foundNonExcludedCollection = foundNonExcludedCollection
 					|| propertyValue instanceof org.hibernate.mapping.Collection
 							&& !temporalExcluded;
@@ -4433,6 +4445,11 @@ public abstract class AbstractEntityPersister
 	@Override
 	public boolean isPropertyAuditedExcluded(int attributeIndex) {
 		return propertyAuditedExcluded[attributeIndex];
+	}
+
+	@Override
+	public boolean isPropertyAuditedExcludedForRead(int attributeIndex) {
+		return propertyAuditedExcludedForRead[attributeIndex];
 	}
 
 	@Override

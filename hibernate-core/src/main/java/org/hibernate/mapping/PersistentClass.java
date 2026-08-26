@@ -104,6 +104,13 @@ public abstract sealed class PersistentClass
 	private List<CallbackDefinition> callbackDefinitions;
 	private Table auxiliaryTable;
 	private Map<String, Column> auxiliaryColumns;
+	// @AuditOverride declarations on this class that target a property physically owned by a genuine
+	// entity ancestor (as opposed to a @MappedSuperclass). Such a property has only one shared Property
+	// object for the whole hierarchy, so this per-class map is how a subclass's own audited decision for
+	// it is recorded, distinct from the ancestor's own Property#isAuditedExcluded().
+	private Map<String, Boolean> auditOverrides;
+	// See #addAuditRevivedPropertyName.
+	private Set<String> auditRevivedPropertyNames;
 
 	private final List<CheckConstraint> checkConstraints = new ArrayList<>();
 
@@ -336,6 +343,56 @@ public abstract sealed class PersistentClass
 			auxiliaryColumns = new HashMap<>();
 		}
 		auxiliaryColumns.put( name, column );
+	}
+
+	/**
+	 * Records this class's own {@code @AuditOverride} decision for a property physically owned by a
+	 * genuine entity ancestor (identified by its attribute name).
+	 */
+	public void addAuditOverride(String propertyName, boolean audited) {
+		if ( auditOverrides == null ) {
+			auditOverrides = new HashMap<>();
+		}
+		auditOverrides.put( propertyName, audited );
+	}
+
+	/**
+	 * @return this class's own {@code @AuditOverride} decision for the named property, physically owned by
+	 * a genuine entity ancestor, or {@code null} if this class declares no such override.
+	 */
+	public Boolean getAuditOverride(String propertyName) {
+		return auditOverrides == null ? null : auditOverrides.get( propertyName );
+	}
+
+	/**
+	 * @return this class's own {@code @AuditOverride} declarations targeting properties physically owned
+	 * by a genuine entity ancestor, keyed by attribute name. Empty if there are none.
+	 */
+	public Map<String, Boolean> getAuditOverrides() {
+		return auditOverrides == null ? Map.of() : auditOverrides;
+	}
+
+	/**
+	 * Records, on the root of a hierarchy, that some descendant's {@code @AuditOverride} revives a
+	 * property physically owned by a genuine entity ancestor which excludes it by default. Since
+	 * SINGLE_TABLE audit reads are built once, shared across the whole hierarchy (there is one physical
+	 * audit table and one polymorphic query, not a per-concrete-type one), the shared read query must
+	 * include this property's column whenever ANY entity in the hierarchy wants it audited - unlike the
+	 * per-persister write mask, which stays scoped to each entity's own decision.
+	 */
+	public void addAuditRevivedPropertyName(String propertyName) {
+		if ( auditRevivedPropertyNames == null ) {
+			auditRevivedPropertyNames = new HashSet<>();
+		}
+		auditRevivedPropertyNames.add( propertyName );
+	}
+
+	/**
+	 * @return {@code true} if some descendant of this (root) class revives the named property via its own
+	 * {@code @AuditOverride}, even though this class's own default excludes it.
+	 */
+	public boolean isAuditRevivedPropertyName(String propertyName) {
+		return auditRevivedPropertyNames != null && auditRevivedPropertyNames.contains( propertyName );
 	}
 
 	public String getEntityName() {
