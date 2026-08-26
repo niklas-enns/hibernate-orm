@@ -224,6 +224,66 @@ public @interface Audited {
 	}
 
 	/**
+	 * Overrides whether a persistent attribute inherited from a {@code @MappedSuperclass}
+	 * participates in {@linkplain Audited auditing}, as seen from the point of view of the
+	 * class on which this annotation is placed.
+	 * <p>
+	 * A plain {@link Excluded @Audited.Excluded} declared directly on a member of a
+	 * {@code @MappedSuperclass} excludes that attribute from every entity which inherits it.
+	 * {@code @Audited.Override} lets a specific subclass override that decision for its own
+	 * audit log, without changing the shared superclass:
+	 * <pre>
+	 * &#64;MappedSuperclass
+	 * class Base {
+	 *     &#64;Audited.Excluded
+	 *     String comment;
+	 * }
+	 *
+	 * &#64;Entity
+	 * &#64;Audited
+	 * &#64;Audited.Override(name = "comment", isAudited = true)
+	 * class IncludeComment extends Base {}
+	 * </pre>
+	 * <p>
+	 * As with {@link jakarta.persistence.AttributeOverride}, an override declared on a
+	 * subclass takes precedence over one declared on a superclass for the same attribute
+	 * path.
+	 *
+	 * @see Excluded
+	 * @see Overrides
+	 */
+	@Documented
+	@Target({TYPE, METHOD, FIELD})
+	@Retention(RUNTIME)
+	@Repeatable(Overrides.class)
+	@interface Override {
+		/**
+		 * The path of the persistent attribute whose auditing is being overridden,
+		 * relative to the class or embedded attribute on which this annotation is
+		 * placed.
+		 */
+		String name();
+
+		/**
+		 * Whether the named attribute should be audited.
+		 */
+		boolean isAudited() default true;
+	}
+
+	/**
+	 * Groups multiple {@link Override @Audited.Override} declarations on the same class or
+	 * attribute.
+	 *
+	 * @see Override
+	 */
+	@Documented
+	@Target({TYPE, METHOD, FIELD})
+	@Retention(RUNTIME)
+	@interface Overrides {
+		Override[] value();
+	}
+
+	/**
 	 * Specifies a custom audit table name (and optionally schema
 	 * and catalog) for an audited collection.
 	 * Placed on the collection field or property.

@@ -16,7 +16,6 @@ import java.util.Set;
 import jakarta.annotation.Nonnull;
 import org.hibernate.MappingException;
 import org.hibernate.annotations.Audited;
-import org.hibernate.annotations.AuditOverride;
 import org.hibernate.annotations.Changelog;
 import org.hibernate.audit.AuditStrategy;
 import org.hibernate.audit.ChangesetListener;
@@ -77,7 +76,7 @@ public final class AuditHelper {
 			MetadataBuildingContext context) {
 		// Must run (i.e. be registered as a second pass) before bindAuditTable(auditTable, rootClass,
 		// context) below: that call's own second pass computes the root's shared audit table's columns
-		// via resolveExcludedColumns(RootClass), which needs every subclass's @AuditOverride already
+		// via resolveExcludedColumns(RootClass), which needs every subclass's @Audited.Override already
 		// resolved onto it in order to correctly revive a column an ancestor excludes by default.
 		resolveAncestorAuditOverridesForHierarchy( rootClass, context );
 		bindAuditTable( auditTable, rootClass, context );
@@ -86,7 +85,7 @@ public final class AuditHelper {
 	}
 
 	/**
-	 * Registers a second pass that resolves every entity's {@code @AuditOverride} targeting a property
+	 * Registers a second pass that resolves every entity's {@code @Audited.Override} targeting a property
 	 * physically owned by a genuine entity ancestor, for the whole hierarchy rooted at {@code rootClass}.
 	 * Deferred to a second pass because subclasses aren't registered on their superclass until all
 	 * classes have been bound.
@@ -273,7 +272,7 @@ public final class AuditHelper {
 			MetadataBuildingContext context) {
 		final var modelsContext = context.getBootstrapContext().getModelsContext();
 		for ( var subclass : parent.getDirectSubclasses() ) {
-			// Resolve @AuditOverride targeting an ancestor-Entity-owned property for every subclass,
+			// Resolve @Audited.Override targeting an ancestor-Entity-owned property for every subclass,
 			// regardless of inheritance strategy - including SINGLE_TABLE, whose subclasses are NOT
 			// TableOwners (they share the root's table rather than owning one of their own).
 			final var subclassDetails = modelsContext.getClassDetailsRegistry()
@@ -320,11 +319,14 @@ public final class AuditHelper {
 	}
 
 	/**
-	 * Scans {@code subclassDetails}'s own {@code @AuditOverride}/{@code @AuditOverrides} declarations for
-	 * ones that target a property NOT among {@code subclass}'s own declared properties - i.e. one
-	 * physically owned by a genuine entity ancestor, which has only one shared {@link Property} object for
-	 * the whole hierarchy. Such a property is bound (and its default {@code Property#isAuditedExcluded()}
-	 * decided) exactly once, by the ancestor that declares it, so a subclass's override targeting it would
+	 * Scans {@code subclassDetails}'s own {@code @Audited.Override}/{@code @Audited.Overrides} declarations,
+	 * and those of every Java ancestor class up to (but not including) {@code subclass}'s own
+	 * {@code PersistentClass} superclass - i.e. any {@code @MappedSuperclass} levels interposed between
+	 * {@code subclass} and its nearest mapped ancestor - for ones that target a property NOT among
+	 * {@code subclass}'s own declared properties. Such a property is physically owned by a genuine entity
+	 * ancestor further up, which has only one shared {@link Property} object for the whole hierarchy: it is
+	 * bound (and its default {@code Property#isAuditedExcluded()} decided) exactly once, by the ancestor
+	 * that declares it, so a subclass's (or an interposed mapped-superclass's) override targeting it would
 	 * otherwise never be consulted. Recording it on {@code subclass} itself lets both schema generation
 	 * (see {@link #resolveExcludedColumns(RootClass)}) and per-persister audit masking (see
 	 * {@code AbstractEntityPersister}) apply it specifically to this subclass, without disturbing the
@@ -337,12 +339,20 @@ public final class AuditHelper {
 			PersistentClass subclass,
 			ClassDetails subclassDetails,
 			MetadataBuildingContext context) {
-		final var overrides = subclassDetails.getRepeatedAnnotationUsages(
-				AuditOverride.class, context.getBootstrapContext().getModelsContext() );
-		for ( var override : overrides ) {
-			final String propertyName = override.name();
-			if ( !hasOwnProperty( subclass, propertyName ) ) {
-				subclass.addAuditOverride( propertyName, override.isAudited() );
+		final var modelsContext = context.getBootstrapContext().getModelsContext();
+		final Map<String, Boolean> resolved = new HashMap<>();
+		for ( var current = subclassDetails;
+				current != null && !ClassDetails.OBJECT_CLASS_DETAILS.equals( current );
+				current = current.getSuperClass() ) {
+			final var overrides = current.getRepeatedAnnotationUsages( Audited.Override.class, modelsContext );
+			for ( var override : overrides ) {
+				// A closer (already-visited, more-derived) class's override wins over a farther one.
+				resolved.putIfAbsent( override.name(), override.isAudited() );
+			}
+		}
+		for ( var entry : resolved.entrySet() ) {
+			if ( !hasOwnProperty( subclass, entry.getKey() ) ) {
+				subclass.addAuditOverride( entry.getKey(), entry.getValue() );
 			}
 		}
 	}
@@ -878,7 +888,7 @@ public final class AuditHelper {
 		for ( var subclass : rootClass.getSubclasses() ) {
 			collectPropertyColumns( subclass, mappedColumns, excluded );
 		}
-		// A subclass's own @AuditOverride(isAudited = true) can revive a property physically owned by a
+		// A subclass's own @Audited.Override(isAudited = true) can revive a property physically owned by a
 		// genuine entity ancestor, which the ancestor excludes by default. The column must still exist in
 		// the one shared table/audit table if ANY subtype in the hierarchy wants it audited - the reviving
 		// subclass's own persister-level mask (see AbstractEntityPersister) then decides, per instance,

@@ -9,7 +9,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
 
 import org.hibernate.annotations.Audited;
-import org.hibernate.annotations.AuditOverride;
 import org.hibernate.boot.Metadata;
 import org.hibernate.boot.MetadataSources;
 import org.hibernate.boot.registry.StandardServiceRegistry;
@@ -26,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Tests that {@link AuditOverride @AuditOverride} lets a subclass override
+ * Tests that {@link Audited.Override @Audited.Override} lets a subclass override
  * whether an attribute inherited from a {@code @MappedSuperclass} is excluded
  * from that subclass's audit log, without changing the shared superclass or
  * any sibling subclass.
@@ -62,16 +61,16 @@ class AuditOverrideTest {
 	}
 
 	@Audited
-	@AuditOverride(name = "secret", isAudited = true)
+	@Audited.Override(name = "secret", isAudited = true)
 	@Entity(name = "Included")
 	static class IncludedEntity extends Base {
 	}
 
 	// Chaining two @MappedSuperclass levels exercises a "closer override wins" scenario. See
-	// AuditOverrideEntityAncestorTest for @AuditOverride targeting a property owned by a genuine
+	// AuditOverrideEntityAncestorTest for @Audited.Override targeting a property owned by a genuine
 	// @Entity ancestor rather than a @MappedSuperclass.
 	@MappedSuperclass
-	@AuditOverride(name = "secret", isAudited = true)
+	@Audited.Override(name = "secret", isAudited = true)
 	static class Middle extends Base {
 	}
 
@@ -81,7 +80,7 @@ class AuditOverrideTest {
 	}
 
 	@Audited
-	@AuditOverride(name = "secret", isAudited = false)
+	@Audited.Override(name = "secret", isAudited = false)
 	@Entity(name = "ReExcluded")
 	static class ReExcludedEntity extends Middle {
 	}
@@ -96,11 +95,11 @@ class AuditOverrideTest {
 
 		assertTrue(
 				metadata.getEntityBinding( ExcludedEntity.class.getName() ).getProperty( "secret" ).isAuditedExcluded(),
-				"sibling without @AuditOverride keeps the superclass's exclusion"
+				"sibling without @Audited.Override keeps the superclass's exclusion"
 		);
 		assertFalse(
 				metadata.getEntityBinding( IncludedEntity.class.getName() ).getProperty( "secret" ).isAuditedExcluded(),
-				"@AuditOverride(isAudited = true) should include the inherited attribute"
+				"@Audited.Override(isAudited = true) should include the inherited attribute"
 		);
 	}
 
@@ -116,11 +115,11 @@ class AuditOverrideTest {
 		assertFalse(
 				metadata.getEntityBinding( InheritsMiddleOverrideEntity.class.getName() )
 						.getProperty( "secret" ).isAuditedExcluded(),
-				"entity with no @AuditOverride of its own inherits Middle's override"
+				"entity with no @Audited.Override of its own inherits Middle's override"
 		);
 		assertTrue(
 				metadata.getEntityBinding( ReExcludedEntity.class.getName() ).getProperty( "secret" ).isAuditedExcluded(),
-				"ReExcludedEntity's own @AuditOverride should win over the one inherited from Middle"
+				"ReExcludedEntity's own @Audited.Override should win over the one inherited from Middle"
 		);
 	}
 }

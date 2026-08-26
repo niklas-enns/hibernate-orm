@@ -625,13 +625,13 @@ public abstract class AbstractEntityPersister
 			propertyTemporalExcluded[i] = temporalExcluded;
 			foundTemporalExcluded = foundTemporalExcluded || temporalExcluded;
 			// A property physically owned by a genuine entity ancestor has only one shared Property object
-			// for the whole hierarchy, so persistentClass's own @AuditOverride (if any) for it - which is
+			// for the whole hierarchy, so persistentClass's own @Audited.Override (if any) for it - which is
 			// specific to THIS persister/entity, unlike the shared property.isAuditedExcluded() - takes
 			// precedence. See PersistentClass#addAuditOverride and AuditHelper#resolveAncestorAuditOverrides.
 			final Boolean auditOverride = persistentClass.getAuditOverride( property.getName() );
 			propertyAuditedExcluded[i] = auditOverride != null ? !auditOverride : property.isAuditedExcluded();
 			// The shared, polymorphic audit read query built for this hierarchy's root must still select
-			// this column if a descendant's own @AuditOverride revives it, even when THIS entity's own
+			// this column if a descendant's own @Audited.Override revives it, even when THIS entity's own
 			// write mask above stays excluded. See PersistentClass#addAuditRevivedPropertyName.
 			propertyAuditedExcludedForRead[i] = propertyAuditedExcluded[i]
 					&& !persistentClass.getRootClass().isAuditRevivedPropertyName( property.getName() );

@@ -817,7 +817,7 @@ public interface EntityPersister extends EntityMappingType, EntityMutationTarget
 	 * whole inheritance hierarchy (relevant for SINGLE_TABLE, where one physical audit table and one
 	 * query serve every concrete subtype). Unlike {@link #isPropertyAuditedExcluded(int)}, which reflects
 	 * only this specific entity's own decision, this also accounts for a descendant's own
-	 * {@code @AuditOverride} reviving a property that this entity excludes by default - such a column
+	 * {@code @Audited.Override} reviving a property that this entity excludes by default - such a column
 	 * must still be selected, even though this entity's own rows never populate it.
 	 */
 	default boolean isPropertyAuditedExcludedForRead(int attributeIndex) {

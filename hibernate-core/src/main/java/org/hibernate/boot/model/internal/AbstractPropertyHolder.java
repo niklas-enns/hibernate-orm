@@ -12,7 +12,7 @@ import java.util.Map;
 import jakarta.persistence.AttributeConverter;
 import org.hibernate.AnnotationException;
 import org.hibernate.AssertionFailure;
-import org.hibernate.annotations.AuditOverride;
+import org.hibernate.annotations.Audited;
 import org.hibernate.annotations.ColumnTransformer;
 import org.hibernate.annotations.TimeZoneColumn;
 import org.hibernate.boot.model.convert.internal.ConverterDescriptors;
@@ -702,7 +702,7 @@ public abstract class AbstractPropertyHolder implements PropertyHolder {
 			return result;
 		}
 		final var overrides =
-				element.getRepeatedAnnotationUsages( AuditOverride.class,
+				element.getRepeatedAnnotationUsages( Audited.Override.class,
 						context.getBootstrapContext().getModelsContext() );
 		for ( var override : overrides ) {
 			result.put( qualify( path, override.name() ), override.isAudited() );

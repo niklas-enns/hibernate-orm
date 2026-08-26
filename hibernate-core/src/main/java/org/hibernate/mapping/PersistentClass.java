@@ -104,7 +104,7 @@ public abstract sealed class PersistentClass
 	private List<CallbackDefinition> callbackDefinitions;
 	private Table auxiliaryTable;
 	private Map<String, Column> auxiliaryColumns;
-	// @AuditOverride declarations on this class that target a property physically owned by a genuine
+	// @Audited.Override declarations on this class that target a property physically owned by a genuine
 	// entity ancestor (as opposed to a @MappedSuperclass). Such a property has only one shared Property
 	// object for the whole hierarchy, so this per-class map is how a subclass's own audited decision for
 	// it is recorded, distinct from the ancestor's own Property#isAuditedExcluded().
@@ -346,7 +346,7 @@ public abstract sealed class PersistentClass
 	}
 
 	/**
-	 * Records this class's own {@code @AuditOverride} decision for a property physically owned by a
+	 * Records this class's own {@code @Audited.Override} decision for a property physically owned by a
 	 * genuine entity ancestor (identified by its attribute name).
 	 */
 	public void addAuditOverride(String propertyName, boolean audited) {
@@ -357,7 +357,7 @@ public abstract sealed class PersistentClass
 	}
 
 	/**
-	 * @return this class's own {@code @AuditOverride} decision for the named property, physically owned by
+	 * @return this class's own {@code @Audited.Override} decision for the named property, physically owned by
 	 * a genuine entity ancestor, or {@code null} if this class declares no such override.
 	 */
 	public Boolean getAuditOverride(String propertyName) {
@@ -365,7 +365,7 @@ public abstract sealed class PersistentClass
 	}
 
 	/**
-	 * @return this class's own {@code @AuditOverride} declarations targeting properties physically owned
+	 * @return this class's own {@code @Audited.Override} declarations targeting properties physically owned
 	 * by a genuine entity ancestor, keyed by attribute name. Empty if there are none.
 	 */
 	public Map<String, Boolean> getAuditOverrides() {
@@ -373,7 +373,7 @@ public abstract sealed class PersistentClass
 	}
 
 	/**
-	 * Records, on the root of a hierarchy, that some descendant's {@code @AuditOverride} revives a
+	 * Records, on the root of a hierarchy, that some descendant's {@code @Audited.Override} revives a
 	 * property physically owned by a genuine entity ancestor which excludes it by default. Since
 	 * SINGLE_TABLE audit reads are built once, shared across the whole hierarchy (there is one physical
 	 * audit table and one polymorphic query, not a per-concrete-type one), the shared read query must
@@ -389,7 +389,7 @@ public abstract sealed class PersistentClass
 
 	/**
 	 * @return {@code true} if some descendant of this (root) class revives the named property via its own
-	 * {@code @AuditOverride}, even though this class's own default excludes it.
+	 * {@code @Audited.Override}, even though this class's own default excludes it.
 	 */
 	public boolean isAuditRevivedPropertyName(String propertyName) {
 		return auditRevivedPropertyNames != null && auditRevivedPropertyNames.contains( propertyName );

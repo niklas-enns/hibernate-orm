@@ -82,7 +82,7 @@ public interface PropertyHolder {
 
 	/**
 	 * Return null if whether the named attribute is audited has not been
-	 * overridden via {@link org.hibernate.annotations.AuditOverride}, or the
+	 * overridden via {@link org.hibernate.annotations.Audited.Override}, or the
 	 * overridden {@code isAudited} value otherwise.
 	 */
 	default Boolean getOverriddenAudited(String propertyName) {
