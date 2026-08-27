@@ -74,9 +74,13 @@ import org.hibernate.temporal.TemporalTableStrategy;
 import org.hibernate.usertype.CompositeUserType;
 
 import java.lang.annotation.Annotation;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.Map;
 
 import static jakarta.persistence.FetchType.LAZY;
@@ -616,12 +620,72 @@ public class PropertyBinder {
 		}
 	}
 
-	private void handleAuditedExcluded(Property property) {
-		if ( memberDetails != null && memberDetails.hasDirectAnnotationUsage( Audited.Excluded.class ) ) {
+	private void handleAuditedExcluded(Property property) { //TODO collection nicht vergessen
+		if ( memberDetails != null && isEffectivelyExcluded() ) {
 			property.setAuditedExcluded( true );
 			property.setOptimisticLocked( false );
 		}
 	}
+
+	private boolean isEffectivelyExcluded() {
+		var persistentClass = this.holder.getPersistentClass();
+		var lowestOverrides = extractLowestAuditOverridesFromHierarchy( persistentClass,
+				this.buildingContext.getBootstrapContext().getModelsContext() );
+		var lowestOverride = lowestOverrides.get( name );
+		var isExcludedInitially = memberDetails.hasDirectAnnotationUsage(
+				Audited.Excluded.class ) || (lowestOverride != null && !lowestOverride.isAudited());
+		return isExcludedInitially &&
+			!isRevoked( name, extractRevocations( persistentClass.getRootClass(), this.buildingContext ) );
+	}
+
+	static Map<String, Audited.Override> extractLowestAuditOverridesFromHierarchy(PersistentClass persistentClass, ModelsContext modelsContext) {
+		var effectiveAuditOverride = new HashMap<String, Audited.Override>();
+		var fullHierarchy = new ArrayList<PersistentClass>( persistentClass.getSubclasses() );
+		fullHierarchy.add( persistentClass );
+		fullHierarchy.forEach( pc -> addOverridesToMap( pc, effectiveAuditOverride, modelsContext ) );
+		return effectiveAuditOverride;
+	}
+
+	public static HashSet<String> extractRevocations(RootClass rootClass, MetadataBuildingContext context) {
+		var revokedProperties = new HashSet<String>();
+		var fullHierarchy = new ArrayList<PersistentClass>( rootClass.getSubclasses() ); //Problem: subclasses are not available when binding str1, therefore the revocation will not be picked up
+		fullHierarchy.add( rootClass );
+		fullHierarchy.forEach( pc -> {
+			var overrides = new HashMap<String, Audited.Override>();
+			addOverridesToMap( pc, overrides, context.getBootstrapContext().getModelsContext() );
+			overrides.forEach( (property, annotation) -> {
+				if ( annotation.isAudited() ) {
+					revokedProperties.add( property );
+				}
+			} );
+		} );
+		return revokedProperties;
+	}
+
+	private static void addOverridesToMap(PersistentClass pc, HashMap<String, Audited.Override> overridesMap, ModelsContext modelsContext) {
+		var classToScan = pc.getClassName();
+		collectOverrides( classToScan, overridesMap, modelsContext );
+		var msc = pc.getSuperMappedSuperclass();
+		while ( msc != null ) {
+			collectOverrides( msc.getMappedClass().getName(), overridesMap, modelsContext );
+			msc = msc.getSuperMappedSuperclass();
+		}
+	}
+
+	private static void collectOverrides(String classToScan, HashMap<String, Audited.Override> overrides, ModelsContext modelsContext) {
+		var registry = modelsContext.getClassDetailsRegistry();
+		if (classToScan == null) return;
+		registry.getClassDetails( classToScan )
+				.forEachAnnotationUsage( Audited.Override.class, modelsContext,
+						override -> overrides.putIfAbsent( override.name(), override )
+				);
+	}
+
+	static boolean isRevoked(String property, Set<String> revokedProperties) {
+		return revokedProperties.contains( property );
+	}
+
+
 
 	private void addTemporalExcludedColumnOptions(Property property) {
 		if ( buildingContext.getTemporalTableStrategy() == TemporalTableStrategy.NATIVE ) {
